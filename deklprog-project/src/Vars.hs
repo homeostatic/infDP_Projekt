@@ -23,7 +23,7 @@ testVars = quickCheck spec
 -- -}
 
 class Vars a where
-  allVars :: a -> [VarName]
+  allVars :: a -> [VarName] -- Diese Methode soll alle in einem Datentyp enthaltenen Variablen (ohne Duplikate) zurückgeben.
 
 instance Vars Term where
   allVars (Var n) = [n]
