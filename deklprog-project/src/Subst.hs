@@ -2,14 +2,14 @@
 
 module Subst
   ( Subst, -- don't export the constructor of the data type!
-    -- domain,
-    -- empty,
-    -- single,
+    domain,
+    empty,
+    single,
     -- compose,
-    -- apply,
+    apply,
     -- restrictTo,
-    -- testSubst,
-    -- isEmpty,
+    testSubst,
+    isEmpty,
     -- testSubst,
   )
 where
@@ -17,7 +17,13 @@ where
 import Base.Type
 import Data.List (intercalate, nub, sort)
 import Test.QuickCheck
+import Vars
 
+
+
+-- Restrict a substitution to a given set of variables
+restrictTo :: Subst -> [VarName] -> Subst
+restrictTo (Subst vts) vs = Subst [(x, t) | (x, t) <- vts, x `elem` vs]
 -- Data type for substitutions
 data Subst = Subst [(VarName, Term)]
   deriving (Show)
@@ -28,9 +34,73 @@ instance Arbitrary Subst where
   -- i.e. whose domain contains the same variable more than once.
   arbitrary = Subst <$> (arbitrary `suchThat` ((\vts -> length vts == length (nub vts)) . map fst))
 
+
+{- -- Pretty printing of substitutions
+instance Pretty Subst where
+  pretty (Subst vts) = '{' : intercalate ", " (map prettyVt vts) ++ "}"
+    where
+      prettyVt (x, t) = unwords [pretty (Var x), "->", pretty t] -}
+
+-- All variables occuring in substitutions
+instance Vars Subst where
+  allVars (Subst vts) = nub (vs ++ concatMap allVars ts)
+    where
+      (vs, ts) = unzip vts
 -- Properties
 
-{- Uncomment this to test the properties when all required functions are implemented
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+--                                                                      Aufgaben                                                                   --
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+-- Definieren Sie eine Funktion domain :: Subst -> [VarName], die den Definitionsbereich einer Substitution zurückgibt, wobei wir domain
+-- so definieren, dass nur die Variablen enthalten sind, die durch die Substitution verändert werden.
+domain :: Subst -> [VarName]
+domain (Subst vts) = dom vts where
+  dom [] = []
+  dom (s:ss)  | check (fst s) (snd s) = [fst s] ++ dom ss
+              | otherwise           = dom ss
+    where 
+      check (VarName fromVarName) (Var (VarName toVarName)) = fromVarName /= toVarName -- Wenn sich nach der Subtitution nichts änder (gleic VarName) nicht zur Liste hinzufügen
+      check _ _ = True  
+
+
+empty :: Subst -- Erstellt eine leere Subtitution
+empty = Subst []
+
+single :: VarName -> Term -> Subst -- zum Erstellen einer Substitution, die lediglich eine einzelne Variable auf einen Term abbildet.
+single varname term = if term == Var varname
+                      then Subst []
+                      else Subst [(varname, term)]
+
+isEmpty :: Subst -> Bool -- zum Prüfen, ob der Definitionsbereich (domain) einer Substitution leer ist.
+isEmpty subst = if domain subst == [] then True else False
+
+
+{- apply :: Subst -> Term -> Term -- zum Anwenden einer Substitution auf ein Term.
+apply (Subst vts) (Var varname) = applyRules vts varname
+  where
+    applyRules [] varname'  = Var varname'
+    applyRules (x:xs) varname' | fst x == varname'  = snd x
+                               | otherwise          = applyRules xs
+apply (Subst vts) (Comb combName terms) = Comb combName (map (apply (Subst vts)) terms) -}
+apply :: Subst -> Term -> Term -- zum Anwenden einer Substitution auf ein Term.
+apply (Subst vts) (Var varname) = applyRules vts
+  where
+    applyRules [] = Var varname
+    applyRules ((vn, t) : xs)
+      | vn == varname = t
+      | otherwise = applyRules xs
+apply (Subst vts) (Comb combName terms) =
+    Comb combName (map (apply (Subst vts)) terms)
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+--                                                                      Tests                                                                   --
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+-- TODO: Auskommentierte Tests müssen wieder aktiviert werden, wenn alle erforderlichen Funktionen implementiert sind!!
+
+
+--{- Uncomment this to test the properties when all required functions are implemented
 
 -- Applying the empty substitution to a term should not change the term
 prop_1 :: Term -> Bool
@@ -41,8 +111,8 @@ prop_2 :: VarName -> Term -> Bool
 prop_2 x t = apply (single x t) (Var x) == t
 
 -- Applying a composed substitution is equal to applying the two substitutions individually
-prop_3 :: Term -> Subst -> Subst -> Bool
-prop_3 t s1 s2 = apply (compose s1 s2) t == apply s1 (apply s2 t)
+-- prop_3 :: Term -> Subst -> Subst -> Bool
+-- prop_3 t s1 s2 = apply (compose s1 s2) t == apply s1 (apply s2 t)
 
 -- The domain of the empty substitution is empty
 prop_4 :: Bool
@@ -56,17 +126,17 @@ prop_5 x = null (domain (single x (Var x)))
 prop_6 :: VarName -> Term -> Property
 prop_6 x t = t /= Var x ==> domain (single x t) == [x]
 
--- The domain of a composed substitution is the union of the domains of the two substitutions
-prop_7 :: Subst -> Subst -> Bool
-prop_7 s1 s2 = all (`elem` (domain s1 ++ domain s2)) (domain (compose s1 s2))
+-- -- The domain of a composed substitution is the union of the domains of the two substitutions
+-- prop_7 :: Subst -> Subst -> Bool
+-- prop_7 s1 s2 = all (`elem` (domain s1 ++ domain s2)) (domain (compose s1 s2))
 
--- The domain of a composed substitution does not contain variables that are mapped to themselves
-prop_8 :: VarName -> VarName -> Property
-prop_8 x1 x2 =
-  x1
-    /= x2
-    ==> domain (compose (single x2 (Var x1)) (single x1 (Var x2)))
-    == [x2]
+-- -- The domain of a composed substitution does not contain variables that are mapped to themselves
+-- prop_8 :: VarName -> VarName -> Property
+-- prop_8 x1 x2 =
+--   x1
+--     /= x2
+--     ==> domain (compose (single x2 (Var x1)) (single x1 (Var x2)))
+--     == [x2]
 
 -- The empty substitution does not contain any variables
 prop_9 :: Bool
@@ -84,18 +154,18 @@ prop_11 x t =
     ==> sort (nub (allVars (single x t)))
     == sort (nub (x : allVars t))
 
--- The variables occuring in a composed substitution are a subset of the variables occuring in the two substitutions
-prop_12 :: Subst -> Subst -> Bool
-prop_12 s1 s2 =
-  all (`elem` (allVars s1 ++ allVars s2)) (allVars (compose s1 s2))
+-- -- The variables occuring in a composed substitution are a subset of the variables occuring in the two substitutions
+-- prop_12 :: Subst -> Subst -> Bool
+-- prop_12 s1 s2 =
+--   all (`elem` (allVars s1 ++ allVars s2)) (allVars (compose s1 s2))
 
--- The composed subsitution should contain the left substitution unless its variables are mapped by the right substitution
-prop_13 :: VarName -> VarName -> Property
-prop_13 x1 x2 =
-  x1
-    /= x2
-    ==> sort (allVars (compose (single x2 (Var x1)) (single x1 (Var x2))))
-    == sort [x1, x2]
+-- -- The composed subsitution should contain the left substitution unless its variables are mapped by the right substitution
+-- prop_13 :: VarName -> VarName -> Property
+-- prop_13 x1 x2 =
+--   x1
+--     /= x2
+--     ==> sort (allVars (compose (single x2 (Var x1)) (single x1 (Var x2))))
+--     == sort [x1, x2]
 
 -- The domain of a substitution is a subset of all its variables
 prop_14 :: Subst -> Bool
@@ -119,5 +189,5 @@ return []
 testSubst :: IO Bool
 testSubst = $(quickCheckAll)
 
--}
+-- -}
 
