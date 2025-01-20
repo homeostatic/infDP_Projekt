@@ -18,6 +18,7 @@ import Base.Type
 import Data.List (intercalate, nub, sort)
 import Test.QuickCheck
 import Vars
+-- import Text.XHtml (base)
 
 
 
@@ -58,7 +59,7 @@ domain :: Subst -> [VarName]
 domain (Subst vts) = dom vts where
   dom [] = []
   dom (s:ss)  | check (fst s) (snd s) = [fst s] ++ dom ss
-              | otherwise           = dom ss
+              | otherwise             = dom ss
     where 
       check (VarName fromVarName) (Var (VarName toVarName)) = fromVarName /= toVarName -- Wenn sich nach der Subtitution nichts änder (gleic VarName) nicht zur Liste hinzufügen
       check _ _ = True  
@@ -94,6 +95,16 @@ apply (Subst vts) (Comb combName terms) =
     Comb combName (map (apply (Subst vts)) terms)
 
 
+-- combine two substitutions into a single new substitution
+-- s = {X_1 ->t_1, X_2->t_2,...X_k->t_k}
+-- t = {Y_1 ->u_1, Y_2->u_2,...Y_k->u_k}
+--t o s := {X_i -> t(t_i) | X_i -> t_i \in s \land X_i \neq t(t_i)} \cup {Y_j -> u_j \in t | Y_j \notin dom(s)}
+compose :: Subst -> Subst -> Subst
+compose (Subst a) (Subst []) = Subst a
+compose (Subst []) (Subst b) = Subst b
+compose s1 s2 = Subst [(Vn1, apply s1 tn1) | (Vn1, tn1) <-  ] ++ [(Vn4, ts4) |  ]
+
+
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 --                                                                      Tests                                                                   --
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -111,8 +122,8 @@ prop_2 :: VarName -> Term -> Bool
 prop_2 x t = apply (single x t) (Var x) == t
 
 -- Applying a composed substitution is equal to applying the two substitutions individually
--- prop_3 :: Term -> Subst -> Subst -> Bool
--- prop_3 t s1 s2 = apply (compose s1 s2) t == apply s1 (apply s2 t)
+prop_3 :: Term -> Subst -> Subst -> Bool
+prop_3 t s1 s2 = apply (compose s1 s2) t == apply s1 (apply s2 t)
 
 -- The domain of the empty substitution is empty
 prop_4 :: Bool
@@ -127,16 +138,16 @@ prop_6 :: VarName -> Term -> Property
 prop_6 x t = t /= Var x ==> domain (single x t) == [x]
 
 -- -- The domain of a composed substitution is the union of the domains of the two substitutions
--- prop_7 :: Subst -> Subst -> Bool
--- prop_7 s1 s2 = all (`elem` (domain s1 ++ domain s2)) (domain (compose s1 s2))
+prop_7 :: Subst -> Subst -> Bool
+prop_7 s1 s2 = all (`elem` (domain s1 ++ domain s2)) (domain (compose s1 s2))
 
 -- -- The domain of a composed substitution does not contain variables that are mapped to themselves
--- prop_8 :: VarName -> VarName -> Property
--- prop_8 x1 x2 =
---   x1
---     /= x2
---     ==> domain (compose (single x2 (Var x1)) (single x1 (Var x2)))
---     == [x2]
+prop_8 :: VarName -> VarName -> Property
+prop_8 x1 x2 =
+  x1
+    /= x2
+    ==> domain (compose (single x2 (Var x1)) (single x1 (Var x2)))
+    == [x2]
 
 -- The empty substitution does not contain any variables
 prop_9 :: Bool
