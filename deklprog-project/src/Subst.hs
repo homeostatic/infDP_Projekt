@@ -106,7 +106,10 @@ apply (Subst vts) (Comb combName terms) =
 
 
 compose :: Subst -> Subst -> Subst
-compose  (Subst s2) (Subst s1) = Subst ([(vn1, apply (Subst s2) t1) | (vn1, t1) <- s1, apply (Subst s2) t1 /= Var vn1] ++ [(vn2, t2) | (vn2, t2) <- s2, vn2 `notElem` map fst s1])
+compose  (Subst s2) (Subst s1) = Subst (
+                                          [(vn1, apply (Subst s2) t1) | (vn1, t1) <- s1, apply (Subst s2) t1 /= Var vn1] 
+                                            ++ [(vn2, t2) | (vn2, t2) <- s2, vn2 `notElem` map fst s1]
+                                     )
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 --                                                                      Tests                                                                   --
