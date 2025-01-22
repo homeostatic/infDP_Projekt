@@ -5,12 +5,11 @@ module Subst
     domain,
     empty,
     single,
-    -- compose,
+    compose,
     apply,
-    -- restrictTo,
+    restrictTo,
     testSubst,
     isEmpty,
-    -- testSubst,
   )
 where
 
