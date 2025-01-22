@@ -99,11 +99,14 @@ apply (Subst vts) (Comb combName terms) =
 -- s = {X_1 ->t_1, X_2->t_2,...X_k->t_k}
 -- t = {Y_1 ->u_1, Y_2->u_2,...Y_k->u_k}
 --t o s := {X_i -> t(t_i) | X_i -> t_i \in s \land X_i \neq t(t_i)} \cup {Y_j -> u_j \in t | Y_j \notin dom(s)}
-compose :: Subst -> Subst -> Subst
-compose (Subst a) (Subst []) = Subst a
-compose (Subst []) (Subst b) = Subst b
-compose s1 s2 = Subst [(Vn1, apply s1 tn1) | (Vn1, tn1) <-  ] ++ [(Vn4, ts4) |  ]
 
+--broadly we need to unify s2 with s1 by:
+  -- applying s2 to s1 and then removing results that are equal to terms of s1.
+  -- add all mambers of s2 where Y_j not in the terms of S1
+
+
+compose :: Subst -> Subst -> Subst
+compose  (Subst s2) (Subst s1) = Subst ([(vn1, apply (Subst s2) t1) | (vn1, t1) <- s1, apply (Subst s2) t1 /= Var vn1] ++ [(vn2, t2) | (vn2, t2) <- s2, vn2 `notElem` map fst s1])
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 --                                                                      Tests                                                                   --
@@ -165,18 +168,18 @@ prop_11 x t =
     ==> sort (nub (allVars (single x t)))
     == sort (nub (x : allVars t))
 
--- -- The variables occuring in a composed substitution are a subset of the variables occuring in the two substitutions
--- prop_12 :: Subst -> Subst -> Bool
--- prop_12 s1 s2 =
---   all (`elem` (allVars s1 ++ allVars s2)) (allVars (compose s1 s2))
+-- The variables occuring in a composed substitution are a subset of the variables occuring in the two substitutions
+prop_12 :: Subst -> Subst -> Bool
+prop_12 s1 s2 =
+  all (`elem` (allVars s1 ++ allVars s2)) (allVars (compose s1 s2))
 
--- -- The composed subsitution should contain the left substitution unless its variables are mapped by the right substitution
--- prop_13 :: VarName -> VarName -> Property
--- prop_13 x1 x2 =
---   x1
---     /= x2
---     ==> sort (allVars (compose (single x2 (Var x1)) (single x1 (Var x2))))
---     == sort [x1, x2]
+-- The composed subsitution should contain the left substitution unless its variables are mapped by the right substitution
+prop_13 :: VarName -> VarName -> Property
+prop_13 x1 x2 =
+  x1
+    /= x2
+    ==> sort (allVars (compose (single x2 (Var x1)) (single x1 (Var x2))))
+    == sort [x1, x2]
 
 -- The domain of a substitution is a subset of all its variables
 prop_14 :: Subst -> Bool
