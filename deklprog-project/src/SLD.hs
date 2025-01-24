@@ -16,8 +16,8 @@ data SLDTree = SLDTree Goal [(Subst, SLDTree)] --Goal [Term] --Unifikation?
   deriving (Show)
 
 sld :: Prog -> Goal -> SLDTree
-sld = undified
-
+sld _ (Goal []) = SLDTree (Goal []) []  --"no further braches"
+-- sld (Prog rls) (Goal tms) = unify ...
 
 -- Example Tree
 {--

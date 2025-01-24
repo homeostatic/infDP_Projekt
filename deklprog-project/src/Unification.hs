@@ -2,7 +2,7 @@
 
 module Unification
   ( -- testUnification
-  , -- unify
+  unify
   ) where
 
 
