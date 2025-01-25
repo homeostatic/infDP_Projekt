@@ -15,9 +15,32 @@ import Subst
 data SLDTree = SLDTree Goal [(Subst, SLDTree)] --Goal [Term] --Unifikation?
   deriving (Show)
 
+
+--prolog arbeitet goals L->R ab
+--versuch unifikation von g mit alle rules
+    -- wenn unifikation != Nothing -> weitermachen
+    -- wenn unifikation == Nothing -> deadend  
+
 sld :: Prog -> Goal -> SLDTree
-sld _ (Goal []) = SLDTree (Goal []) []  --"no further braches"
--- sld (Prog rls) (Goal tms) = unify ...
+sld _ (Goal []) = SLDTree (Goal []) []  --"no further branches"
+--                                                        this might need to be a list of results, currently we only look at the first rule
+
+sld (Prog (rl:rls)) (Goal (g:gs)) = SLDTree (Goal g:gs) [(sub, (sld (Prog (rl:rls)) (Goal (g':gs))))] where
+                                        sub = unify g rl --need to handle (the "CASE" of?) unify returning 'Nothing'
+                                        g' = apply sub g --updated goal applying the substitution  
+
+
+{--
+Example program:
+p(X, Z) :- q(X, Y), p(Y, Z).
+p(X, X).
+q(a, b).
+
+Example Query:
+-? p(S, b).
+
+--}
+
 
 -- Example Tree
 {--
