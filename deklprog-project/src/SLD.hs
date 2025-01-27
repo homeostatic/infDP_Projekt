@@ -10,6 +10,8 @@ where
 
 import Base.Type
 import Subst
+import Unification
+
 
 -- Data type for an SLD tree
 data SLDTree = SLDTree Goal [(Subst, SLDTree)] --Goal [Term] --Unifikation?
@@ -17,18 +19,19 @@ data SLDTree = SLDTree Goal [(Subst, SLDTree)] --Goal [Term] --Unifikation?
 
 
 --prolog arbeitet goals L->R ab
---versuch unifikation von g mit alle rules
-    -- wenn unifikation != Nothing -> weitermachen
+--versuch unifikation von g mit head von alle rules
     -- wenn unifikation == Nothing -> deadend  
+    -- wenn unifikation == Just sub -> weitermachen mit new goal == apply sub body (of rule)
 
 sld :: Prog -> Goal -> SLDTree
 sld _ (Goal []) = SLDTree (Goal []) []  --"no further branches"
---                                                        this might need to be a list of results, currently we only look at the first rule
 
-sld (Prog (rl:rls)) (Goal (g:gs)) = SLDTree (Goal g:gs) [(sub, (sld (Prog (rl:rls)) (Goal (g':gs))))] where
-                                        sub = unify g rl --need to handle (the "CASE" of?) unify returning 'Nothing'
-                                        g' = apply sub g --updated goal applying the substitution  
-
+sld p@(Prog rules) (Goal (g:gs)) = SLDTree (Goal (g:gs)) (concatMap tryRule rules)
+  where
+    tryRule (Rule head body) = case unify g head of
+      Nothing -> [] --unification failed
+      Just sub -> [(sub, sld p (Goal (map (apply sub) body)))]
+    
 
 {--
 Example program:
