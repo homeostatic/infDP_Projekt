@@ -1,7 +1,7 @@
 module SLD
   ( SLDTree (..),
-    -- sld,
-    -- Strategy,
+    sld,
+    -- ,Strategy,
     -- dfs,
     -- bfs,
     -- solveWith,
@@ -19,18 +19,18 @@ data SLDTree = SLDTree Goal [(Subst, SLDTree)] --Goal [Term] --Unifikation?
 
 
 --prolog arbeitet goals L->R ab
---versuch unifikation von g mit head von alle rules
+--versuch unifikation von g mit ruleHead von alle rules
     -- wenn unifikation == Nothing -> deadend  
-    -- wenn unifikation == Just sub -> weitermachen mit new goal == apply sub body (of rule)
+    -- wenn unifikation == Just sub -> weitermachen mit new goal == apply sub ruleBody
 
 sld :: Prog -> Goal -> SLDTree
 sld _ (Goal []) = SLDTree (Goal []) []  --"no further branches"
 
 sld p@(Prog rules) (Goal (g:gs)) = SLDTree (Goal (g:gs)) (concatMap tryRule rules)
   where
-    tryRule (Rule head body) = case unify g head of
+    tryRule (Rule ruleHead ruleBody) = case unify g ruleHead of
       Nothing -> [] --unification failed
-      Just sub -> [(sub, sld p (Goal (map (apply sub) body)))]
+      Just sub -> [(sub, sld p (Goal (map (apply sub) ruleBody)))]
     
 
 {--
@@ -78,3 +78,12 @@ SLDTree
 │  │     └─ No further branches
 
 --}
+SLDTree 
+  (Goal [Comb "p" [Var (VarName "S"),Comb "b" []]]) 
+          [(Subst [(VarName "S",Var (VarName "X")),(VarName "Z",Comb "b" [])],
+              SLDTree
+                  (Goal [Comb "q" [Var (VarName "X"),Var (VarName "Y")],Comb "p" [Var (VarName "Y"),Comb "b" []]])
+                      [(Subst [(VarName "X",Comb "a" []),(VarName "Y",Comb "b" [])],
+                        SLDTree (Goal []) [])]),
+          (Subst [(VarName "S",Comb "b" []),(VarName "X",Comb "b" [])]
+              ,SLDTree (Goal []) [])]

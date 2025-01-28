@@ -1,7 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Unification
-  ( -- testUnification
+  ( testUnification,
   unify
   ) where
 
