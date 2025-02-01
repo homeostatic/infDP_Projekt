@@ -1,39 +1,59 @@
 module SLD
-  ( SLDTree (..),
-    sld,
-    Strategy,
-    -- dfs,
-    -- bfs,
-    -- solveWith,
-  )
-where
+  ( SLDTree(..), sld, Strategy, dfs, bfs, solveWith
+  ) where
+-- updated with musterlösungen
+
+import Data.Maybe
 
 import Base.Type
+
+import Rename
 import Subst
 import Unification
-import Control.Applicative (Alternative(empty))
-
+import Vars
 
 -- Data type for an SLD tree
-data SLDTree = SLDTree Goal [(Subst, SLDTree)] --Goal [Term] --Unifikation?
+data SLDTree = SLDTree Goal [(Subst, SLDTree)]
   deriving (Show)
 
-
---prolog arbeitet goals L->R ab
---versuch unifikation von g mit ruleHead von alle rules
-    -- wenn unifikation == Nothing -> deadend  
-    -- wenn unifikation == Just sub -> weitermachen mit new goal == apply sub ruleBody
-
-sld :: Prog -> Goal -> SLDTree
-sld _ (Goal []) = SLDTree (Goal []) []  --"no further branches"
-
-sld p@(Prog rules) (Goal (g:gs)) = SLDTree (Goal (g:gs)) (concatMap tryRule rules)
+-- Construct the SLD tree for a given program and goal
+sld :: Strategy -> Prog -> Goal -> SLDTree
+sld strat p = build empty
   where
-    tryRule (Rule ruleHead ruleBody) = case unify g ruleHead of
-      Nothing -> [] --unification failed
-      Just sub -> [(sub, sld p (Goal (map (apply sub) ruleBody)))] 
-  --  [(sub , aufruf) | <-[freshVars]]
-    
+  -- Found solution (empty goal)
+  build _ g'@(Goal []) = SLDTree g' []
+  -- Non-built-in predicates
+  build s g'@(Goal (l:ls)) = SLDTree g'
+    [ (mgu, build (compose mgu s) (Goal (map (apply mgu) (b ++ ls))))
+    -- 1. Renaming of the program (fresh variants)
+    | let Prog rs = p, Rule h b <- map (rename (allVars g' ++ allVars s)) rs
+    -- 2. mgu of the rule heads and the first literal
+    , mgu <- maybeToList (unify l h)
+    ]
+
+-- Alias type for search strategies
+type Strategy = SLDTree -> [Subst]
+
+-- Depth-first search in an SLD tree
+dfs :: Strategy
+dfs = dfs' empty
+  where dfs' sigma (SLDTree (Goal []) _)  = [sigma]
+        dfs' sigma (SLDTree _         ts) =
+          [phi | (theta, t') <- ts, phi <- dfs' (compose theta sigma) t']
+
+-- Breadth-first search in an SLD tree
+bfs :: Strategy
+bfs t = bfs' [(empty, t)]
+  where bfs' [] = []
+        bfs' ts = [sigma | (sigma, SLDTree (Goal []) _) <- ts] ++
+          bfs' [ (compose theta sigma, t')
+               | (sigma, SLDTree _ ts') <- ts
+               , (theta, t') <- ts'
+               ]
+
+-- Solve a given goal with respect to a given program using a given strategy
+solveWith :: Prog -> Goal -> Strategy -> [Subst]
+solveWith p g strat = map (`restrictTo` allVars g) (strat (sld strat p g))
 
 {--
 Example program:
@@ -120,8 +140,6 @@ SLDTree (Goal [Comb "p" [Var (VarName "S"),Comb "b" []]])
 
 
 
--- -- statergies for SLD resolution which return results where possible
-type Strategy = SLDTree -> [Subst]
 
 -- -- depth-first search statergy
 -- dfs :: Strategy

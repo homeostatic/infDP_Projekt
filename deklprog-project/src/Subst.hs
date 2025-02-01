@@ -20,7 +20,6 @@ import Vars
 -- import Text.XHtml (base)
 
 
-
 -- Restrict a substitution to a given set of variables
 restrictTo :: Subst -> [VarName] -> Subst
 restrictTo (Subst vts) vs = Subst [(x, t) | (x, t) <- vts, x `elem` vs]
