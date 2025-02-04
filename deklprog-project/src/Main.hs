@@ -3,12 +3,10 @@ module Main (main) where
 import Vars
 import Base.Type
 import Base.IOHelper
+import Base.Parser
 import Subst
 import SLD
 import Pretty
-
-
-
 
 
 -- copied over from müsterlosungen
@@ -49,6 +47,10 @@ printAnswers (s : ss) continue = do
 welcomeMessage :: String
 welcomeMessage = "Welcome!\nType \":h\" for help."
 
+helpMessage :: String
+helpMessage = "Commands available from the prompt:\n  <goal>      Solves/proves the specified goal.\n  :h          Shows this help message.\n  :l <file>   Loads the specified file.\n  :q          Exits the interactive environment.\n  :s <strat>  Sets the specified search strategy\n              where <strat> is one of 'dfs' or 'bfs'."
+
+
 -- Main function
 main :: IO ()
 main = do
@@ -57,13 +59,31 @@ main = do
 
 loop ::IO ()
 loop = do
-    input <- getLine
-    case parseCommand input of
-        Right Quit -> putStrLn "exiting... \n"
-        _ -> main
-
     -- Eingabe einlesen
-    -- Prüfen ob ein Befehl oder eine Anfrage eingegeben wurde
+    input <- getLine   
+    case input of
+      --command handling, commands begin with ':'
+      ':':rest -> case parseCommand rest of
+        Left err -> do
+          putStrLn err
+          loop
+        Right Help -> do
+          putStrLn helpMessage
+          loop
+        Right (Load fn) -> do 
+          putStrLn ("load file"++fn) --placeholder, TODO: load file logic
+          loop
+        Right Quit -> putStrLn "exiting... \n"
+      --Anfrage handling
+      anf -> case parse anf of
+        Right (Prog p) -> do
+          putStrLn ("parsed program:"++ show p)
+          loop     --TODO test anfrage logic
+        Left err -> do
+          putStrLn err
+          loop
+    
+    
     -- Befehl ausführen oder die Anfrage abarbeiten und die Lösungen anbieten
     -- Falls ein Fehler aufgetreten ist: Fehler ausgeben
     -- Zu 1. springen
